@@ -8,7 +8,6 @@ services:
     env_file: .env
     ports:
       - "8000:8000"
-
     volumes:
       - "./bridge:/usr/src/app/bridge"
     restart: 'no'
@@ -17,7 +16,7 @@ services:
       - bridge-net
 
 
-  db:
+  postgres:
     image: postgres
     env_file: .env
     ports:
@@ -28,10 +27,33 @@ services:
     networks:
       - bridge-net
 
+  rabbitmq:
+    image: rabbitmq:3.7.5-management
+    restart: "no"
+    env_file: .env
+    environment:
+      RABBITMQ_ERLANG_COOKIE: 6085e2412b6fa88647466c6a81c0cea0
+      RABBITMQ_DEFAULT_USER: rabbitmq
+      RABBITMQ_DEFAULT_PASS: rabbitmq
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - 5672:5672
+      - 15672:15672
+      - 5671:5671
+      - 15671:15671
+      - 25672:25672
+      - 4369:4369
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq/mnesia/rabbit@app-rabbitmq:cached
+      - ./rabbitmq-init.sh:/rabbitmq-init.sh
+    networks:
+      - bridge-net
+
 
 volumes:
   db-data:
-
+  rabbitmq-data:
+  postgres-data:
 
 networks:
   bridge-net:
