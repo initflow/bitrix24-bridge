@@ -29,10 +29,13 @@ class AbstractHandler(object):
 
 
 class AMQPHandler(AbstractHandler):
-
     _json_loads = ujson.loads
 
     def __init__(self, client: MessageClient):
+        """
+        Handle command message from RabbitMQ queue, start process and send result back
+        :param client: amqp.MessageClient
+        """
         self.client = client
 
     async def handle(self, message: aio_pika.IncomingMessage) -> None:

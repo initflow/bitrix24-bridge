@@ -327,4 +327,4 @@ class RabbitMQClient(MessageClient):
         queue = await channel.declare_queue(
             self.queue, auto_delete=False, durable=self.queue_durable
         )
-        await queue.consume(callback)
+        return await queue.consume(callback)

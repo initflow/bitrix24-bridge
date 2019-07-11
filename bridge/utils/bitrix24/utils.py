@@ -38,6 +38,11 @@ def prepare_batch(calls: Dict) -> Dict[str, str]:
                 command = '{}?{}'.format(call[0], urlencode(call[1]))
             except IndexError:
                 raise IncorrectCall(name, call)
+        elif isinstance(call, dict):
+            try:
+                command = '{}?{}'.format(call['method'], urlencode(call['params']))
+            except KeyError:
+                raise IncorrectCall(name)
         else:
             raise IncorrectCall(name, call)
         commands[name] = command

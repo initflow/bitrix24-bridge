@@ -64,6 +64,10 @@ class Bitrix24(object):
 
     TRANSPORTS = ['json', 'xml']
 
+    # constant list() page size, it is not pagination param
+    PAGE_SIZE = 50
+    PAGE_SIZE_MINIS_ONE = PAGE_SIZE - 1  # fast math.ceil(x / y) coefficient
+
     timeout = 60
 
     _request_class = Request
@@ -334,6 +338,13 @@ class Bitrix24(object):
         :param params: dict Request parameters
         :return: aiohttp.ClientResponse
         """
+
+        if self.use_webhook:
+            """
+            If perform use_webhook, redirect commands
+            """
+            return await self.call_webhook(method=method, params=params)
+
         url: str = self._resolve_call_url(method)
         query = {
             'auth': self.access_token

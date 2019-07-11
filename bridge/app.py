@@ -6,6 +6,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from bridge.utils.amqp.handlers import AMQPHandler
+from bridge.utils.commands.handlers import CommandHandler
 from .extensions import ext
 from .routes import routes
 from .utils.amqp.amqp import RabbitMQConsumer, RabbitMQClient
@@ -45,6 +46,8 @@ async def on_startup_event(*args, **kwargs):
     ext.amqp_client = RabbitMQClient(
         loop=ext.loop
     )
+
+    ext.command_handler = CommandHandler(ext.bitrix24)
 
     await ext.amqp_client.receive(
         callback=AMQPHandler(client=ext.amqp_client).handle
