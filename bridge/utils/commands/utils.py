@@ -52,6 +52,11 @@ async def retry(
     work = True
     response = None
 
+    if not args:
+        args = []
+    if not kwargs:
+        kwargs = {}
+
     while work:
         response = await async_func(
             *args,

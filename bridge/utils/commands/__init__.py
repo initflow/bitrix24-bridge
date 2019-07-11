@@ -40,6 +40,12 @@ class Command:
             """
             self.action = 'default'
 
+        if not self.params:
+            self.params = {}
+
+        if not self.meta:
+            self.meta = {}
+
     def data(self) -> dict:
         return {
             f: getattr(self, f) for f in self.__slots__
@@ -90,8 +96,8 @@ class CommandResponse:
             """
             Special case, if result have single response
             """
-            self.next = next or self.result[1].get('next')
-            self.total = total or self.result[1].get('total')
+            self.next = next or self.result[0].get('next')
+            self.total = total or self.result[0].get('total')
 
     def data(self) -> dict:
         return {
@@ -126,6 +132,34 @@ class CommandResponse:
             result=[data]
         )
 
+    @staticmethod
+    async def from_batch_response(cmd: Command, response: aiohttp.ClientResponse) -> 'CommandResponse':
+        """
+        Build CommandResponse from Command and batch aiohttp.ClientResponse
+        :param cmd:
+        :param response:
+        :return:
+        """
+
+        data = {}
+
+        try:
+            """
+            response._body should be read in context manager before and saved in object cache
+            """
+            data = await response.json()
+        except Exception as e:
+            pass
+            print(e)
+
+        return CommandResponse(
+            cmd=cmd,
+            status_code=response.status,
+            next=data.get('next'),
+            total=data.get('total'),
+            result=[data]
+        )
+
 
 class ResponseModem:
 
@@ -135,9 +169,9 @@ class ResponseModem:
 
     def __new__(cls,
                 data: Union[CommandResponse, List[CommandResponse]],
-                many: bool = False, *args, **kwargs) -> Union[Dict, List]:
+                many: bool = True, *args, **kwargs) -> Union[Dict, List]:
         """
-        Convert CommandResponse Entity or List[CommandResponse] to message
+        Serialize CommandResponse Entity or List[CommandResponse] to Json message
         :param data:
         :param many:
         :param args:

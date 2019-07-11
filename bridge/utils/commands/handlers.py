@@ -18,6 +18,9 @@ class BaseCommandHandler(ABC):
     async def dispatch(self, data: Dict) -> Optional[Dict]:
         raise NotImplementedError
 
+    async def __call__(self, *args, **kwargs):
+        return await self.dispatch(*args, **kwargs)
+
     async def list(self, data: Command) -> List[CommandResponse]:
         """
         Get all entities, use pagination (start=<number>)
@@ -51,7 +54,7 @@ class CommandHandler(BaseCommandHandler):
     def __init__(self, bx_client: Optional[Bitrix24] = None):
         self.bx_client = bx_client or ext.bitrix24
 
-    async def dispatch(self, data: Dict):
+    async def dispatch(self, data: Dict, *args, **kwargs):
         cmd = Command(**data)
 
         if not cmd.method:
@@ -69,6 +72,9 @@ class CommandHandler(BaseCommandHandler):
             return
 
         return response
+
+    def __call__(self, *args, **kwargs):
+        return self.dispatch(*args, **kwargs)
 
     async def list(self, cmd: Command) -> List[CommandResponse]:
         """
@@ -172,10 +178,8 @@ class CommandHandler(BaseCommandHandler):
                     }
                 }
             )
-
-            responses.append(
-                await CommandResponse.from_client_response(cmd=cmd, response=response)
-            )
+            res = await CommandResponse.from_client_response(cmd=cmd, response=response)
+            responses.append(res)
 
         return responses
 

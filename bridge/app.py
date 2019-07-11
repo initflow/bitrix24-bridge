@@ -40,6 +40,7 @@ async def on_startup_event(*args, **kwargs):
         webhook_code=settings.BITRIX24_WEBHOOK_CODE,
         use_webhook=True,
     )
+    ext.command_handler = CommandHandler(ext.bitrix24)
 
     ext.loop = asyncio.get_running_loop()
 
@@ -47,10 +48,11 @@ async def on_startup_event(*args, **kwargs):
         loop=ext.loop
     )
 
-    ext.command_handler = CommandHandler(ext.bitrix24)
-
     await ext.amqp_client.receive(
-        callback=AMQPHandler(client=ext.amqp_client).handle
+        callback=AMQPHandler(
+            client=ext.amqp_client,
+            command_handler=ext.command_handler
+        ).handle
     )
 
 
