@@ -45,7 +45,7 @@ class AMQPHandler(AbstractHandler):
     async def handle(self, message: aio_pika.IncomingMessage) -> None:
         async with message.process() as msg:
             data = await self.json(msg.body)
-            print(data)
+            ext.logger.info(data)
 
             response: CommandResponse = await self.command_handler(data)
 

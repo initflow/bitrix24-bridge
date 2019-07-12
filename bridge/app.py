@@ -1,5 +1,7 @@
 import asyncio
+import os
 
+from aiologger.formatters.base import Formatter
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -12,6 +14,9 @@ from .routes import routes
 from .utils.amqp.amqp import RabbitMQConsumer, RabbitMQClient
 from .utils.bitrix24.api import Bitrix24
 from bridge import settings
+
+from aiologger import Logger
+from aiologger.handlers.files import AsyncFileHandler
 
 
 def create_app(debug=True, cli=False) -> Starlette:
@@ -40,6 +45,7 @@ async def on_startup_event(*args, **kwargs):
         webhook_code=settings.BITRIX24_WEBHOOK_CODE,
         use_webhook=True,
     )
+
     ext.command_handler = CommandHandler(ext.bitrix24)
 
     ext.loop = asyncio.get_running_loop()
@@ -48,6 +54,9 @@ async def on_startup_event(*args, **kwargs):
         loop=ext.loop
     )
 
+    configure_logger(ext.loop)
+
+    # listener should start last
     await ext.amqp_client.receive(
         callback=AMQPHandler(
             client=ext.amqp_client,
@@ -55,12 +64,34 @@ async def on_startup_event(*args, **kwargs):
         ).handle
     )
 
+    ext.logger.info("App started")
+
 
 async def on_shutdown_event(*args, **kwargs):
     # close Http Session connection
     ext.bitrix24.close()
     # close AMQP connection
     ext.amqp_client.close()
+
+
+def configure_logger(loop):
+    ext.logger = Logger.with_default_handlers(
+        name='bitrix24-bridge',
+        loop=loop
+    )
+
+    file_handler = AsyncFileHandler(
+        filename=os.path.join(settings.LOGGING_DIR, 'bridge.log'),
+        loop=loop,
+    )
+
+    # https://github.com/B2W-BIT/aiologger/issues/60
+    file_handler.formatter = Formatter(
+        fmt="%(levelname)s:%(asctime)s:%(pathname)s:%(lineno)d:%(message)s"
+    )
+    ext.logger.add_handler(
+        file_handler
+    )
 
 
 def configure_app(app: Starlette, debug=False) -> Starlette:

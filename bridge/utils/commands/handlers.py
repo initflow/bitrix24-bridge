@@ -1,6 +1,6 @@
 import asyncio
 from abc import ABC
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Coroutine
 
 from bridge.utils.bitrix24.api import Bitrix24
 from bridge.utils.commands import Command, CommandResponse
@@ -54,26 +54,29 @@ class CommandHandler(BaseCommandHandler):
     def __init__(self, bx_client: Optional[Bitrix24] = None):
         self.bx_client = bx_client or ext.bitrix24
 
-    async def dispatch(self, data: Dict, *args, **kwargs):
+    async def dispatch(self, data: Dict, *args, **kwargs) -> Optional[List[CommandResponse]]:
         cmd = Command(**data)
 
         if not cmd.method:
-            pass # TODO add logging
-            print("Method is None")
-            return
+            ext.logger.error(f"Error on cmd dispatch, data.method is None: {str(data)}")
+            return None
 
-        response = None
         try:
             handler = getattr(self, cmd.action, self.default)
-            response = await handler(cmd)
+            response: List[CommandResponse] = await handler(cmd)
         except Exception as e:
-            pass # TODO add logging
-            print(e)
-            return
+            ext.logger.error(f"Error on process cmd: {str(e)}")
+            return None
 
         return response
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> Coroutine:
+        """
+        Wrap over CommandHandler.dispatch
+        :param args:
+        :param kwargs:
+        :return: awaitable object
+        """
         return self.dispatch(*args, **kwargs)
 
     async def list(self, cmd: Command) -> List[CommandResponse]:
