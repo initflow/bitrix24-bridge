@@ -49,7 +49,10 @@ class AMQPHandler(AbstractHandler):
 
             response: CommandResponse = await self.command_handler(data)
 
+            entity: str = response.method.rsplit('.', 1)[0] if response.method else 'default'
+
             response_data = {
+                "entity": entity,
                 "result": ResponseModem(response)
             }
 
