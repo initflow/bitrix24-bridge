@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Union, Any
+from typing import Dict, Union, Any, List
 
 import aio_pika
 import ujson
@@ -47,9 +47,9 @@ class AMQPHandler(AbstractHandler):
             data = await self.json(msg.body)
             ext.logger.info(data)
 
-            response: CommandResponse = await self.command_handler(data)
+            response: List[CommandResponse] = await self.command_handler(data)
 
-            entity: str = response.method.rsplit('.', 1)[0] if response.method else 'default'
+            entity: str = data.get('method').rsplit('.', 1)[0] if 'method' in data else 'default'
 
             response_data = {
                 "entity": entity,
