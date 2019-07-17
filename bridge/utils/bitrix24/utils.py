@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from urllib.parse import urlencode
 
 import aiohttp
@@ -27,6 +27,33 @@ async def resolve_response(response: aiohttp.ClientResponse) -> Dict:
     return result
 
 
+def dfs(data: Any, path: Optional[str] = None):
+    if isinstance(data, (dict,)):
+        return "&".join(
+            dfs(
+                next_data,
+                f"{path}[{key}]" if path else key
+            )
+            for key, next_data in data.items()
+        )
+    elif isinstance(data, (list, tuple)):
+        return "&".join(
+            dfs(
+                next_data,
+                f"{path}[{i}]" if path else i
+            )
+            for i, next_data in enumerate(data)
+        )
+    else:
+        return f"{path}={str(data)}" if path else str(data)
+
+
+def bitrix_urlencode(data):
+    result = dfs(data)
+
+    return result
+
+
 def prepare_batch(calls: Dict) -> Dict[str, str]:
     commands = {}
     for name, call in calls.items():
@@ -35,12 +62,12 @@ def prepare_batch(calls: Dict) -> Dict[str, str]:
             command = call
         elif isinstance(call, (tuple, list)):
             try:
-                command = '{}?{}'.format(call[0], urlencode(call[1]))
+                command = '{}?{}'.format(call[0], bitrix_urlencode(call[1]))
             except IndexError:
                 raise IncorrectCall(name, call)
         elif isinstance(call, dict):
             try:
-                command = '{}?{}'.format(call['method'], urlencode(call['params']))
+                command = '{}?{}'.format(call['method'], bitrix_urlencode(call['params']))
             except KeyError:
                 raise IncorrectCall(name)
         else:

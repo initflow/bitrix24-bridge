@@ -89,6 +89,12 @@ class CommandHandler(BaseCommandHandler):
         # remove pagination param if it exist in params
         cmd.params.pop('start', 0)
 
+        if 'select' not in cmd.params:
+            """
+            Add select params to return custom property
+            """
+            cmd.params['select'] = ["*", "PROPERTY_*"]
+
         # make first request for getting next and total values
         first_request_response = await self.bx_client.call_method(cmd.method, params=cmd.params)
 
@@ -131,10 +137,18 @@ class CommandHandler(BaseCommandHandler):
 
             batch_result = await self.batch(batch_command)
 
-            for res in batch_result:
-                responses_data.extend(
-                    res.result
-                )
+            # get first response, because we send only one command
+            command_response: CommandResponse = batch_result[0]
+
+            # iterate over CommandResponse result
+            for inner_result in command_response.result:
+                """
+                Unpack Bitrix Batch 'result' + Bitrix list 'result'
+                """
+                for res_list in inner_result.get('result', {}).get('result', {}).values():
+                    responses_data.extend(
+                        res_list
+                    )
 
         cmd_response = CommandResponse(
             cmd=cmd,
