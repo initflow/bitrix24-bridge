@@ -1,25 +1,31 @@
 import asyncio
 import os
+from typing import List
 
+from aiologger import Logger
 from aiologger.formatters.base import Formatter
+from aiologger.handlers.files import AsyncFileHandler
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.routing import Route
 
+from bridge import settings
 from bridge.utils.amqp.handlers import AMQPHandler
 from bridge.utils.commands.handlers import CommandHandler
 from .extensions import ext
 from .routes import routes
-from .utils.amqp.amqp import RabbitMQConsumer, RabbitMQClient
+from .utils.amqp.amqp import RabbitMQClient
 from .utils.bitrix24.api import Bitrix24
-from bridge import settings
-
-from aiologger import Logger
-from aiologger.handlers.files import AsyncFileHandler
 
 
 def create_app(debug=True, cli=False) -> Starlette:
+    """
+    Should be sync
+    :param debug:
+    :param cli:
+    :return:
+    """
     app = Starlette(
         debug=debug,
         routes=routes
@@ -34,6 +40,14 @@ def create_app(debug=True, cli=False) -> Starlette:
 
 
 async def on_startup_event(*args, **kwargs):
+    """
+    Setup runtime objects
+
+    AMQP listener should start always after creating bitrix client and start main app
+    :param args:
+    :param kwargs:
+    :return:
+    """
     # TODO maybe need load from db
     ext.bitrix24 = Bitrix24(
         code=settings.BITRIX24_CODE,
@@ -68,6 +82,12 @@ async def on_startup_event(*args, **kwargs):
 
 
 async def on_shutdown_event(*args, **kwargs):
+    """
+    For graceful shutdown need stop clients: bitrix, amqp
+    :param args:
+    :param kwargs:
+    :return:
+    """
     # close Http Session connection
     ext.bitrix24.close()
     # close AMQP connection
@@ -75,6 +95,14 @@ async def on_shutdown_event(*args, **kwargs):
 
 
 def configure_logger(loop):
+    """
+    Setup logger
+
+    Logger should work with app in same loop
+
+    :param loop:
+    :return:
+    """
     ext.logger = Logger.with_default_handlers(
         name='bitrix24-bridge',
         loop=loop
@@ -102,15 +130,17 @@ def configure_app(app: Starlette, debug=False) -> Starlette:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
         app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_HOSTS)
 
-    app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+    # app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
     return app
 
 
-async def configure_extensions():
-    pass
-
-
-async def add_routes(app: Starlette) -> Starlette:
+async def add_routes(app: Starlette, routes: List[Route]) -> Starlette:
+    """
+    Manually adding routes to app
+    :param app:
+    :param routes:
+    :return:
+    """
     app.routes.extend(routes)
     return app

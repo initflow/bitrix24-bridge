@@ -1,5 +1,4 @@
-from typing import Dict, Optional, Any
-from urllib.parse import urlencode
+from typing import Dict, Optional, Any, Union, List
 
 import aiohttp
 import ujson
@@ -48,7 +47,7 @@ def dfs(data: Any, path: Optional[str] = None):
         return f"{path}={str(data)}" if path else str(data)
 
 
-def bitrix_urlencode(data):
+def bitrix_urlencode(data: Union[Dict, List]) -> str:
     result = dfs(data)
 
     return result
